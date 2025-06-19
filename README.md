@@ -2,7 +2,7 @@
 
 A new Flutter project.
 
-## Getting Started
+## Lời Mở Đầu
 
 Dự án "Quản Lý Kho Hàng Xuất Nhập Khẩu" được xây dựng nhằm hỗ trợ các doanh nghiệp hoặc cá nhân quản lý hàng hóa, giao dịch và thông tin kho một cách dễ dàng, hiện đại và hiệu quả hơn.
 
