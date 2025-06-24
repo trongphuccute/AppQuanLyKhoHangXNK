@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'Features/Reports/reports_screen.dart';
+import 'Features/Products/products_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -36,7 +38,6 @@ class HomeScreen extends StatelessWidget {
       height: 180,
       child: Stack(
         children: [
-          // Trục Y
           Positioned(
             left: 0,
             top: 0,
@@ -50,7 +51,6 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
           ),
-          // Biểu đồ
           Padding(
             padding: const EdgeInsets.only(left: 30.0),
             child: Row(
@@ -86,6 +86,84 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  void _showMenuBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.people),
+                title: const Text('Khách hàng'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // TODO: Chuyển trang Khách hàng
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.swap_horiz),
+                title: const Text('Giao dịch'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // TODO: Chuyển trang Giao dịch
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.bar_chart),
+                title: const Text('Báo cáo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ReportScreen(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.warehouse),
+                title: const Text('Kho hàng'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProductsScreen(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.store),
+                title: const Text('Cửa hàng'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // TODO: Chuyển trang Cửa hàng
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final revenueData = [
@@ -109,7 +187,6 @@ class HomeScreen extends StatelessWidget {
         padding: const EdgeInsets.all(12.0),
         child: Column(
           children: [
-            // 4 Info Cards
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -124,7 +201,6 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            // Doanh Thu
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -135,7 +211,6 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 8),
             _buildRevenueChartWithAxis(revenueData, maxY),
             const SizedBox(height: 24),
-            // Tồn Kho
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -164,7 +239,6 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
                   const Divider(),
                   const SizedBox(height: 4),
                   Row(
@@ -193,6 +267,13 @@ class HomeScreen extends StatelessWidget {
         unselectedItemColor: Colors.grey,
         showSelectedLabels: false,
         showUnselectedLabels: false,
+        onTap: (index) {
+          if (index == 0) {
+            _showMenuBottomSheet(context);
+          } else if (index == 2) {
+            // TODO: Chuyển đến Hồ sơ
+          }
+        },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang Chủ'),
