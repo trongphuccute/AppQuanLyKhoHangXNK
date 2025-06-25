@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'Features/Reports/reports_screen.dart';
 import 'Features/Products/products_screen.dart';
+import 'Features/customer/customer_screen.dart';
+import 'Features/trade/GiaoDichScreen.dart';
+import 'Features/Setting/CaiDat.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -113,6 +116,12 @@ class HomeScreen extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(context);
                   // TODO: Chuyển trang Khách hàng
+                    Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CustomerScreen(),
+                    ),
+                  );
                 },
               ),
               ListTile(
@@ -121,6 +130,11 @@ class HomeScreen extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(context);
                   // TODO: Chuyển trang Giao dịch
+                    Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const GiaoDichScreen(),
+                    ));
                 },
               ),
               ListTile(
@@ -262,24 +276,28 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 1,
-        selectedItemColor: Colors.teal,
-        unselectedItemColor: Colors.grey,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        onTap: (index) {
-          if (index == 0) {
-            _showMenuBottomSheet(context);
-          } else if (index == 2) {
-            // TODO: Chuyển đến Hồ sơ
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang Chủ'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Hồ Sơ'),
-        ],
-      ),
+  currentIndex: 1, // hoặc index màn hình hiện tại
+  selectedItemColor: Colors.teal,
+  unselectedItemColor: Colors.grey,
+  showSelectedLabels: false,
+  showUnselectedLabels: false,
+  onTap: (index) {
+    if (index == 0) {
+      _showMenuBottomSheet(context);
+    } else if (index == 2) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const CaiDatScreen()),
+      );
+    }
+  },
+  items: const [
+    BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),
+    BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang Chủ'),
+    BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Hồ Sơ'),
+  ],
+),
+
     );
   }
 }
