@@ -1,89 +1,176 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'Features/Reports/reports_screen.dart';
 import 'Features/Products/products_screen.dart';
-import 'Features/customer/customer_screen.dart';
+import 'Features/customer/customer_list_screen.dart';
 import 'Features/trade/GiaoDichScreen.dart';
 import 'Features/Setting/CaiDat.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  Widget _buildInfoCard(String title, String value) {
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int totalCustomers = 0;
+  int totalProducts = 0;
+  int totalTransactions = 0;
+  int totalRevenue = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchDashboardData();
+  }
+
+  Future<void> fetchDashboardData() async {
+    final customersSnapshot =
+        await FirebaseFirestore.instance.collection('customers').get();
+    final productsSnapshot =
+        await FirebaseFirestore.instance.collection('products').get();
+    final giaoDichSnapshot =
+        await FirebaseFirestore.instance.collection('giao_dich').get();
+
+    double revenue = 0;
+    for (var doc in giaoDichSnapshot.docs) {
+      final data = doc.data();
+      final donGia = (data['donGia'] ?? 0).toInt();
+      final soLuong = (data['soLuong'] ?? 0).toInt();
+      revenue += donGia * soLuong;
+    }
+
+    setState(() {
+      totalCustomers = customersSnapshot.size;
+      totalProducts = productsSnapshot.size;
+      totalTransactions = giaoDichSnapshot.size;
+      totalRevenue = revenue.toInt();
+    });
+  }
+
+  Widget _buildInfoCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: Colors.grey.withOpacity(0.15),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(12),
-      child: Column(
+      padding: const EdgeInsets.all(16),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontSize: 16)),
+          CircleAvatar(
+            backgroundColor: iconColor.withOpacity(0.15),
+            child: Icon(icon, color: iconColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildRevenueChartWithAxis(
-    List<Map<String, dynamic>> data,
-    double maxY,
-  ) {
-    return SizedBox(
-      height: 180,
-      child: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('${maxY.toInt()}'),
-                Text('${(maxY / 2).toInt()}'),
-                const Text('0'),
-              ],
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFDF6F5),
+      appBar: AppBar(
+        title: const Text(
+          'Trang chủ',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: GridView.count(
+          shrinkWrap: true,
+          crossAxisCount: 2,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            _buildInfoCard(
+              title: 'Tồn kho',
+              value: totalProducts.toString(),
+              icon: Icons.inventory_2,
+              iconColor: Colors.blueAccent,
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 30.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children:
-                  data.map((item) {
-                    double percentage = (item['value'] as double) / maxY;
-
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Container(
-                          width: 30,
-                          height: 150 * percentage,
-                          decoration: BoxDecoration(
-                            color: Colors.teal,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          item['label'] as String,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ],
-                    );
-                  }).toList(),
+            _buildInfoCard(
+              title: 'Doanh thu',
+              value: '$totalRevenue VNĐ',
+              icon: Icons.attach_money,
+              iconColor: Colors.green,
             ),
-          ),
+            _buildInfoCard(
+              title: 'Giao dịch',
+              value: totalTransactions.toString(),
+              icon: Icons.swap_horiz,
+              iconColor: Colors.orange,
+            ),
+            _buildInfoCard(
+              title: 'Khách hàng',
+              value: totalCustomers.toString(),
+              icon: Icons.people,
+              iconColor: Colors.purple,
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 1,
+        selectedItemColor: Colors.teal,
+        unselectedItemColor: Colors.grey,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+        onTap: (index) {
+          if (index == 0) {
+            _showMenuBottomSheet(context);
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CaiDatScreen()),
+            );
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang Chủ'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Hồ Sơ'),
         ],
       ),
     );
@@ -115,11 +202,10 @@ class HomeScreen extends StatelessWidget {
                 title: const Text('Khách hàng'),
                 onTap: () {
                   Navigator.pop(context);
-                  // TODO: Chuyển trang Khách hàng
-                    Navigator.push(
+                  Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const CustomerScreen(),
+                      builder: (_) => const CustomerListScreen(),
                     ),
                   );
                 },
@@ -129,12 +215,10 @@ class HomeScreen extends StatelessWidget {
                 title: const Text('Giao dịch'),
                 onTap: () {
                   Navigator.pop(context);
-                  // TODO: Chuyển trang Giao dịch
-                    Navigator.push(
+                  Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const GiaoDichScreen(),
-                    ));
+                    MaterialPageRoute(builder: (_) => const GiaoDichScreen()),
+                  );
                 },
               ),
               ListTile(
@@ -144,9 +228,7 @@ class HomeScreen extends StatelessWidget {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const ReportScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const ReportScreen()),
                   );
                 },
               ),
@@ -157,147 +239,14 @@ class HomeScreen extends StatelessWidget {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const ProductsScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const ProductsScreen()),
                   );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.store),
-                title: const Text('Cửa hàng'),
-                onTap: () {
-                  Navigator.pop(context);
-                  // TODO: Chuyển trang Cửa hàng
                 },
               ),
             ],
           ),
         );
       },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final revenueData = [
-      {'label': 'T2', 'value': 45.0},
-      {'label': 'T4', 'value': 60.0},
-      {'label': 'T7', 'value': 30.0},
-      {'label': 'CN', 'value': 90.0},
-    ];
-    final maxY = 100.0;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Trang chủ',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          children: [
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              children: [
-                _buildInfoCard('Tồn kho', '120'),
-                _buildInfoCard('Doanh thu', '#5.000.000'),
-                _buildInfoCard('Giao dịch', '20'),
-                _buildInfoCard('Khách hàng', '7'),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Doanh Thu',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(height: 8),
-            _buildRevenueChartWithAxis(revenueData, maxY),
-            const SizedBox(height: 24),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blueAccent),
-              ),
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Tồn kho',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      Text(
-                        'sản phẩm',
-                        style: TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                      Text(
-                        'số lượng',
-                        style: TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                  const Divider(),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [Text('Áo Thun'), Text('20 Cái')],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [Text('Quần Jean'), Text('40 Cái')],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [Text('Áo Khoác Dù'), Text('60 Cái')],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-  currentIndex: 1, // hoặc index màn hình hiện tại
-  selectedItemColor: Colors.teal,
-  unselectedItemColor: Colors.grey,
-  showSelectedLabels: false,
-  showUnselectedLabels: false,
-  onTap: (index) {
-    if (index == 0) {
-      _showMenuBottomSheet(context);
-    } else if (index == 2) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const CaiDatScreen()),
-      );
-    }
-  },
-  items: const [
-    BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),
-    BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang Chủ'),
-    BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Hồ Sơ'),
-  ],
-),
-
     );
   }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'register_screen.dart';
 import '../../home_screen.dart';
-import 'forgot_password.dart'; // thêm nếu bạn tạo file quên mật khẩu
+import 'forgot_password.dart'; 
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,7 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) =>  HomeScreen()),
+        MaterialPageRoute(builder: (_) => HomeScreen()),
       );
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(
@@ -73,12 +73,12 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Quản Lý kho hàng',
+              'Quản Lý Hàng Hóa ',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const Text(
-              'Xuất Nhập Khẩu',
+              'Xuất Nhập Kho',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
@@ -174,7 +174,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // 👇 PHẦN THÊM MỚI: "Bạn chưa có tài khoản?"
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

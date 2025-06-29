@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'product_model.dart';
-import 'product_service.dart';
+import 'add_product.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -13,19 +14,34 @@ class _ProductsScreenState extends State<ProductsScreen> {
   List<Product> _allProducts = [];
   List<Product> _filteredProducts = [];
   final TextEditingController _searchController = TextEditingController();
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadProducts();
+    _loadProductsFromFirestore();
   }
 
-  Future<void> _loadProducts() async {
-    final products = await ProductService.fetchProducts();
-    setState(() {
-      _allProducts = products;
-      _filteredProducts = products;
-    });
+  Future<void> _loadProductsFromFirestore() async {
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance.collection('products').get();
+
+      final products =
+          snapshot.docs.map((doc) {
+            final data = doc.data();
+            return Product.fromFirestore(data, doc.id);
+          }).toList();
+
+      setState(() {
+        _allProducts = products;
+        _filteredProducts = products;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Lỗi khi tải sản phẩm: $e');
+      setState(() => _isLoading = false);
+    }
   }
 
   void _filterProducts(String keyword) {
@@ -38,6 +54,85 @@ class _ProductsScreenState extends State<ProductsScreen> {
               )
               .toList();
     });
+  }
+
+  Future<void> _deleteProduct(String docId) async {
+    await FirebaseFirestore.instance.collection('products').doc(docId).delete();
+    _loadProductsFromFirestore();
+  }
+
+  void _showDeleteConfirm(Product product) {
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Xác nhận xoá'),
+            content: Text('Bạn có chắc muốn xoá "${product.name}" không?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Huỷ'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _deleteProduct(product.id);
+                },
+                child: const Text('Xoá', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _showEditDialog(Product product) {
+    final nameController = TextEditingController(text: product.name);
+    final quantityController = TextEditingController(
+      text: product.quantity.toString(),
+    );
+
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Sửa sản phẩm'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Tên sản phẩm'),
+                ),
+                TextField(
+                  controller: quantityController,
+                  decoration: const InputDecoration(labelText: 'Số lượng'),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Huỷ'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final newName = nameController.text.trim();
+                  final newQty = int.tryParse(quantityController.text) ?? 0;
+
+                  await FirebaseFirestore.instance
+                      .collection('products')
+                      .doc(product.id)
+                      .update({'name': newName, 'quantity': newQty});
+
+                  Navigator.pop(context);
+                  _loadProductsFromFirestore();
+                },
+                child: const Text('Lưu'),
+              ),
+            ],
+          ),
+    );
   }
 
   @override
@@ -60,7 +155,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ),
           Expanded(
             child:
-                _filteredProducts.isEmpty
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _filteredProducts.isEmpty
                     ? const Center(child: Text('Không có sản phẩm nào'))
                     : ListView.builder(
                       itemCount: _filteredProducts.length,
@@ -76,17 +173,48 @@ class _ProductsScreenState extends State<ProductsScreen> {
                               product.imagePath,
                               width: 48,
                               height: 48,
-                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (_, __, ___) =>
+                                      const Icon(Icons.image_not_supported),
                             ),
                             title: Text(product.name),
                             subtitle: Text('Mã: ${product.code}'),
-                            trailing: Text('${product.quantity} cái'),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('${product.quantity} cái'),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blue,
+                                  ),
+                                  onPressed: () => _showEditDialog(product),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () => _showDeleteConfirm(product),
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
                     ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddProductScreen()),
+          ).then((_) => _loadProductsFromFirestore());
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Thêm sản phẩm'),
       ),
     );
   }

@@ -1,18 +1,60 @@
 import 'package:flutter/material.dart';
-import '../Products/products_screen.dart';
-import '../Reports/reports_screen.dart';
-import '/Features/Products/product_service.dart';
-import '/Features/Trade/GiaoDichScreen.dart';
-import '/Features/customer/customer_screen.dart';
-// Import các màn hình khác của bạn ở đây:
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../Users/login_screen.dart';
+import 'edit_profile_screen.dart';
 
-class CaiDatScreen extends StatelessWidget {
+class CaiDatScreen extends StatefulWidget {
   const CaiDatScreen({super.key});
 
   @override
+  State<CaiDatScreen> createState() => _CaiDatScreenState();
+}
+
+class _CaiDatScreenState extends State<CaiDatScreen> {
+  late Future<Map<String, dynamic>> _userFuture;
+
+  Future<Map<String, dynamic>> fetchUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+      final data = doc.data() ?? {};
+
+      return {
+        'name': data['name'] ?? user.displayName ?? 'Tên chưa có',
+        'email': data['email'] ?? user.email ?? 'Email chưa có',
+        'phone': data['phone'] ?? 'Chưa có số điện thoại',
+        'address': data['address'] ?? 'Chưa có địa chỉ',
+      };
+    }
+    return {
+      'name': 'Tên chưa có',
+      'email': 'Email chưa có',
+      'phone': 'Chưa có số điện thoại',
+      'address': 'Chưa có địa chỉ',
+    };
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _userFuture = fetchUserData();
+  }
+
+  void _refreshUserData() {
+    setState(() {
+      _userFuture = fetchUserData();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final Color backgroundColor = const Color(0xFFF9ECEB);
-    final Color cardColor = const Color(0xFFF0E6E5);
+    final backgroundColor = const Color(0xFFFFF6F3);
+    final cardColor = const Color(0xFFF6ECEC);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -20,9 +62,10 @@ class CaiDatScreen extends StatelessWidget {
         backgroundColor: backgroundColor,
         elevation: 0,
         title: const Text(
-          'Cài Đặt',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.black),
+          'Hồ Sơ Người Dùng',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
         ),
+        iconTheme: const IconThemeData(color: Colors.black),
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 16),
@@ -30,78 +73,112 @@ class CaiDatScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: ListView(
-          children: [
-            const SizedBox(height: 10),
-            _buildSettingItem(context, Icons.person, 'user@gmail.com', cardColor),
-            _buildSettingItem(context, Icons.bar_chart, 'Báo Cáo', cardColor),
-            _buildSettingItem(context, Icons.shopping_cart_outlined, 'Giao Dịch', cardColor),
-            _buildSettingItem(context, Icons.people, 'Khách Hàng', cardColor),
-            _buildSettingItem(context, Icons.store, 'Kho Hàng', cardColor),
-            _buildSettingItem(context, Icons.location_city, 'Cửa Hàng', cardColor),
-          ],
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.black,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.menu), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: ''),
-        ],
-        onTap: (index) {
-          // Xử lý chuyển trang nếu cần ở đây
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _userFuture,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final userData = snapshot.data!;
+          final name = userData['name'];
+          final email = userData['email'];
+          final phone = userData['phone'];
+          final address = userData['address'];
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ListView(
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const CircleAvatar(
+                        radius: 28,
+                        child: Icon(Icons.person, size: 30),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              email,
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                            const SizedBox(height: 8),
+                            Text("Số điện thoại: $phone"),
+                            Text("Địa chỉ: $address"),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => EditProfileScreen(userData: userData),
+                            ),
+                          );
+                          if (result == true) {
+                            _refreshUserData();
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 30),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  icon: const Icon(Icons.logout),
+                  label: const Text(
+                    'Đăng xuất',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  onPressed: () async {
+                    await FirebaseAuth.instance.signOut();
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ],
+            ),
+          );
         },
       ),
-    );
-  }
-
-  Widget _buildSettingItem(BuildContext context, IconData icon, String title, Color bgColor) {
-    return GestureDetector(
-      onTap: () {
-        if (title == 'Báo Cáo') {
-          Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ReportScreen()));
-        } else if (title == 'Giao Dịch') {
-          Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const GiaoDichScreen()));
-        } else if (title == 'Khách Hàng') {
-          Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CustomerScreen()));
-        } else if (title == 'Kho Hàng') {
-          Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ProductsScreen()));
-      }},
-    
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 24, color: Colors.black),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(fontSize: 16),
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios, size: 16),
-          ],
-        ),
-      )
     );
   }
 }

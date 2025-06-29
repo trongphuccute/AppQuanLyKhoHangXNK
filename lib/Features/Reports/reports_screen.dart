@@ -1,85 +1,119 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'reports_service.dart';
 
 class ReportScreen extends StatelessWidget {
   const ReportScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final revenueData = {
-      'Jan': 1.2,
-      'Feb': 2.4,
-      'Mar': 3.5,
-      'Apr': 2.9,
-      'May': 3.8,
-      'Jun': 4.5,
-    };
-
-    final productSales = [
-      {'code': '#AT', 'name': 'Áo Thun', 'total': '1.150.000VNĐ'},
-      {'code': '#AK', 'name': 'Áo Khoác', 'total': '2.100.000VNĐ'},
-      {'code': '#QJ', 'name': 'Quần Jean', 'total': '3.250.000VNĐ'},
-      {'code': '#QK', 'name': 'Quần Kaki', 'total': '1.220.000VNĐ'},
-      {'code': '#QJN', 'name': 'Quần Jean Nữ', 'total': '7.150.000VNĐ'},
-    ];
-
     return Scaffold(
       appBar: AppBar(title: const Text('Báo Cáo')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Doanh thu theo tháng:', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            AspectRatio(
-              aspectRatio: 1.7,
-              child: LineChart(
-                LineChartData(
-                  borderData: FlBorderData(show: false),
-                  lineBarsData: [
-                    LineChartBarData(
-                      isCurved: true,
-                      color: Colors.teal,
-                      spots: revenueData.entries
-                          .toList()
-                          .asMap()
-                          .entries
-                          .map((e) => FlSpot(e.key.toDouble(), e.value.value))
-                          .toList(),
-                      barWidth: 4,
-                    ),
-                  ],
-                  titlesData: FlTitlesData(
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        interval: 1,
-                        getTitlesWidget: (value, _) {
-                          final index = value.toInt();
-                          if (index < revenueData.keys.length) {
-                            return Text(revenueData.keys.elementAt(index), style: const TextStyle(fontSize: 12));
-                          }
-                          return const Text('');
-                        },
+      body: FutureBuilder(
+        future: Future.wait([
+          ReportService.fetchMonthlyRevenue(),
+          ReportService.fetchProductSales(),
+        ]),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final monthlyData = snapshot.data![0] as Map<String, double>;
+          final productSales = snapshot.data![1] as List<Map<String, String>>;
+
+          final sortedMonths = monthlyData.keys.toList()..sort();
+          final spots = sortedMonths.asMap().entries.map(
+                (e) => FlSpot(
+                  e.key.toDouble(),
+                  monthlyData[e.value]!,
+                ),
+              ).toList();
+
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Doanh thu theo tháng:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                AspectRatio(
+                  aspectRatio: 1.7,
+                  child: LineChart(
+                    LineChartData(
+                      minX: 0,
+                      maxX: (spots.length - 1).toDouble(),
+                      minY: 0,
+                      maxY: monthlyData.values.reduce((a, b) => a > b ? a : b) * 1.2,
+                      clipData: FlClipData.all(),
+                      gridData: FlGridData(show: true),
+                      borderData: FlBorderData(show: true),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: spots,
+                          isCurved: true,
+                          color: Colors.teal,
+                          barWidth: 3,
+                          dotData: FlDotData(show: true),
+                        ),
+                      ],
+                      titlesData: FlTitlesData(
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            interval: 1,
+                            getTitlesWidget: (value, _) {
+                              int index = value.toInt();
+                              if (index >= 0 && index < sortedMonths.length) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Text(
+                                    sortedMonths[index],
+                                    style: const TextStyle(fontSize: 10),
+                                  ),
+                                );
+                              }
+                              return const Text('');
+                            },
+                          ),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 40,
+                            getTitlesWidget: (value, _) {
+                              if (value >= 1000000) {
+                                return Text('${(value / 1000000).toStringAsFixed(1)}M');
+                              } else if (value >= 1000) {
+                                return Text('${(value / 1000).toStringAsFixed(0)}K');
+                              }
+                              return Text('${value.toInt()}');
+                            },
+                          ),
+                        ),
+                        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                       ),
                     ),
-                    leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
-                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   ),
                 ),
-              ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Tổng sản phẩm đã bán:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                ...productSales.map((item) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Text('${item['code']} - ${item['name']}     ${item['total']}'),
+                    )),
+              ],
             ),
-            const SizedBox(height: 24),
-            const Text('Tổng sản phẩm đã bán được:', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            ...productSales.map((item) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Text('${item['code']} - ${item['name']}     ${item['total']}'),
-                )),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
